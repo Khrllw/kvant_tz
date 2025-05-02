@@ -1,0 +1,45 @@
+# Сервис db (PostgreSQL)
+
+services:
+  db:
+    # Использует образ postgres:15
+    image: postgres:15
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: postgres_adm
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: khrllw_test
+    ports:
+      - "5432:5432"
+    # Данные сохраняются в томе postgres_data (чтобы не терялись при перезапуске).
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # healthcheck проверяет, когда БД готова к подключению.
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres_adm -d khrllw_test" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Go-приложение
+  app:
+    # Собирается из Dockerfile в текущей папке
+    build: .
+    ports:
+      - "8080:8080"
+    container_name: ZHOPA
+    # параметры подключения к БД через переменные окружения
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres_adm
+      DB_PASSWORD: password
+      DB_NAME: khrllw_test
+    # Ждёт, пока БД станет здоровой
+    depends_on:
+      db:
+        condition: service_healthy
+
+# Явное объявление тома (добавьте это в конец файла)
+volumes:
+  postgres_data:
