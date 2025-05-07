@@ -1,56 +1,77 @@
 package handlers
 
 import (
-	"khrllwTest/internal/repository"
+	"errors"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"khrllwTest/internal/models"
+	"khrllwTest/internal/services"
 )
 
+// ------------------------------------------------------------
+// Структуры
+// ------------------------------------------------------------
+
+// AuthHandler обрабатывает HTTP-запросы для аутентификации
 type AuthHandler struct {
-	userRepo repository.UserRepository
+	authService *service.AuthService
 }
 
-func NewAuthHandler(userRepo repository.UserRepository) *AuthHandler {
-	return &AuthHandler{userRepo: userRepo}
+// ------------------------------------------------------------
+// Конструктор
+// ------------------------------------------------------------
+
+// NewAuthHandler создает новый экземпляр AuthHandler
+func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
+	}
 }
 
-/*
-// Login обрабатывает аутентификацию
+// ------------------------------------------------------------
+// Методы реализации
+// ------------------------------------------------------------
+
+// Login обрабатывает запрос на аутентификацию
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.sendErrorResponse(c, http.StatusBadRequest, models.ErrInvalidRequestFormat.Error())
 		return
 	}
 
-	// 1. Находим пользователя по email
-	user, err := h.userRepo.FindByEmail(req.Email)
+	token, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "неверные учетные данные"})
+		h.handleAuthError(c, err)
 		return
 	}
 
-	// 2. Проверяем пароль
-	if !utils.CheckPasswordHash(req.Password, user.PasswordHash) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "неверные учетные данные"})
-		return
+	h.sendSuccessResponse(c, token)
+}
+
+// handleAuthError обрабатывает ошибки аутентификации
+func (h *AuthHandler) handleAuthError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, models.ErrInvalidCredentials):
+		h.sendErrorResponse(c, http.StatusUnauthorized, "Неверные учетные данные")
+	case errors.Is(err, models.ErrEmailPasswordRequired):
+		h.sendErrorResponse(c, http.StatusBadRequest, err.Error())
+	default:
+		h.sendErrorResponse(c, http.StatusInternalServerError, "Внутренняя ошибка сервера")
 	}
+}
 
-	// 3. Генерируем JWT токен
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte(utils.JWTKey))
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка генерации токена"})
-		return
-	}
-
-	// 4. Возвращаем токен
-	c.JSON(http.StatusOK, models.LoginResponse{
-		Token: tokenString,
+// sendErrorResponse отправляет ответ с ошибкой
+func (h *AuthHandler) sendErrorResponse(c *gin.Context, statusCode int, errorMsg string) {
+	c.JSON(statusCode, models.ErrorResponse{
+		Error: errorMsg,
 	})
 }
 
-
-*/
+// sendSuccessResponse отправляет успешный ответ
+func (h *AuthHandler) sendSuccessResponse(c *gin.Context, token string) {
+	c.JSON(http.StatusOK, models.LoginResponse{
+		Token: token,
+	})
+}

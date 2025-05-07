@@ -5,10 +5,9 @@ import (
 	"khrllwTest/internal/models"
 )
 
-// OrderRepositoryImpl - реализация для GORM
-type OrderRepositoryImpl struct {
-	db *gorm.DB // Экземпляр подключения к БД
-}
+// ------------------------------------------------------------
+// Интерфейсы
+// ------------------------------------------------------------
 
 // OrderRepository - определяет контракт для работы с заказами
 type OrderRepository interface {
@@ -34,10 +33,27 @@ type OrderRepository interface {
 	Delete(id uint) error
 }
 
+// ------------------------------------------------------------
+// Конструктор
+// ------------------------------------------------------------
+
 // NewOrderRepository создает новый экземпляр OrderRepository
 func NewOrderRepository(db *gorm.DB) OrderRepository {
 	return &OrderRepositoryImpl{db: db}
 }
+
+// ------------------------------------------------------------
+// Реализация
+// ------------------------------------------------------------
+
+// OrderRepositoryImpl - реализация для GORM
+type OrderRepositoryImpl struct {
+	db *gorm.DB // Экземпляр подключения к БД
+}
+
+// ------------------------------------------------------------
+// Методы OrderRepositoryImpl
+// ------------------------------------------------------------
 
 func (r *OrderRepositoryImpl) Create(order *models.Order) error {
 	// INSERT INTO orders (...) VALUES (...)

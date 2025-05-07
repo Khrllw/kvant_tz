@@ -1,205 +1,206 @@
 package handlers
 
 import (
-	"khrllwTest/internal/utils"
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"khrllwTest/internal/models"
-	"khrllwTest/internal/repository"
+	"khrllwTest/internal/services"
 )
 
-// UserHandler
-// Структура для работы с запросами пользователя
-type UserHandler struct{ userRepo repository.UserRepository }
+// ------------------------------------------------------------
+// Структуры
+// ------------------------------------------------------------
 
-// NewUserHandler
-// Новая структура для работы с запросами пользователя
-func NewUserHandler(userRepo repository.UserRepository) *UserHandler {
-	return &UserHandler{userRepo: userRepo}
+// UserHandler обрабатывает HTTP-запросы для работы с пользователями
+type UserHandler struct {
+	userService *service.UserService
 }
 
-// ----------------------------- HANDLERS -----------------------------
+// ------------------------------------------------------------
+// Конструктор
+// ------------------------------------------------------------
 
-// CreateUser Fixme дописать или полностью убрать хеширование
-// CreateUser создание нового пользователя
+// NewUserHandler создает новый экземпляр UserHandler
+func NewUserHandler(userService *service.UserService) *UserHandler {
+	return &UserHandler{
+		userService: userService,
+	}
+}
 
-func (handler *UserHandler) CreateUser(context *gin.Context) {
+// ------------------------------------------------------------
+// Методы обработки запросов
+// ------------------------------------------------------------
+
+// CreateUser обрабатывает запрос на создание пользователя
+func (h *UserHandler) CreateUser(c *gin.Context) {
 	var req models.CreateUserRequest
-
-	// Парсинг входящего JSON
-	if err := context.ShouldBindJSON(&req); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.sendErrorResponse(c, http.StatusBadRequest, models.ErrInvalidRequestFormat.Error())
 		return
 	}
 
-	// Проверка уникальности email
-	if _, err := handler.userRepo.FindByEmail(req.Email); err == nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "email уже существует"})
+	user, err := h.userService.CreateUser(&req)
+	if err != nil {
+		h.handleServiceError(c, err)
 		return
 	}
 
-	// 3. Хеширование пароля
-	//hashedPassword, err := utils.HashPassword(req.Password)
-	//if err != nil {
-	//	c.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка при хешировании пароля"})
-	//	return
-	//}
-
-	// Создание структуры пользователя
-	user := models.User{
-		Name:         req.Name,
-		Email:        req.Email,
-		Age:          req.Age,
-		PasswordHash: req.Password,
-	}
-
-	// Сохранение данных пользователя в БД
-	if err := handler.userRepo.Create(&user); err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка при создании пользователя"})
-		return
-	}
-
-	// Возвращение ответа без пароля
-	context.JSON(http.StatusCreated, models.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Age:   user.Age,
-	})
+	h.sendUserResponse(c, http.StatusCreated, user)
 }
 
-// GetUsers
-// Возвращает список пользователей с пагинацией
-func (handler *UserHandler) GetUsers(context *gin.Context) {
-	// Получение параметров запроса
-	page, _ := strconv.Atoi(context.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(context.DefaultQuery("limit", "10"))
-	minAge, _ := strconv.Atoi(context.Query("min_age"))
-	maxAge, _ := strconv.Atoi(context.Query("max_age"))
-
-	// Вычисление offset для пагинации
-	offset := (page - 1) * limit
-
-	// Получение пользователей из репозитория
-	users, total, err := handler.userRepo.GetAll(offset, limit, minAge, maxAge)
+// GetUsers обрабатывает запрос на получение списка пользователей
+func (h *UserHandler) GetUsers(c *gin.Context) {
+	page, limit, minAge, maxAge, err := h.parseQueryParams(c)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "ошибка при получении пользователей"})
+		h.sendErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Формирование ответа
-	var response models.UsersListResponse
-	for _, user := range users {
-		response.Users = append(response.Users, models.UserResponse{
-			ID:    user.ID,
-			Name:  user.Name,
-			Email: user.Email,
-			Age:   user.Age,
-		})
+	users, total, err := h.userService.GetUsers(page, limit, minAge, maxAge)
+	if err != nil {
+		h.handleServiceError(c, err)
+		return
 	}
 
-	response.Page = page
-	response.Limit = limit
-	response.Total = total
+	response := models.UsersListResponse{
+		Page:  page,
+		Limit: limit,
+		Total: total,
+		Users: h.mapToResponse(users),
+	}
 
-	context.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, response)
 }
 
-func (handler *UserHandler) AddUser(context *gin.Context) {
-	var req models.CreateUserRequest
-	if err := context.ShouldBindJSON(&req); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Проверка уникальности email
-	if _, err := handler.userRepo.FindByEmail(req.Email); err == nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "email already exists"})
-		return
-	}
-
-	hashedPassword, err := utils.HashPassword(req.Password)
+// GetUserByID обрабатывает запрос на получение пользователя по ID
+func (h *UserHandler) GetUserByID(c *gin.Context) {
+	userID, err := h.parseUserID(c)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		h.sendErrorResponse(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	user := models.User{
-		Name:         req.Name,
-		Email:        req.Email,
-		Age:          req.Age,
-		PasswordHash: hashedPassword,
-	}
-
-	if err := handler.userRepo.Create(&user); err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create user"})
+	user, err := h.userService.GetUserByID(userID)
+	if err != nil {
+		h.handleServiceError(c, err)
 		return
 	}
 
-	context.JSON(http.StatusCreated, models.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Age:   user.Age,
-	})
+	h.sendUserResponse(c, http.StatusOK, user)
 }
 
-func (handler *UserHandler) GetUserFromID(context *gin.Context) {
-	id, err := strconv.Atoi(context.Param("user_id"))
+// UpdateUser обрабатывает запрос на обновление пользователя
+func (h *UserHandler) UpdateUser(c *gin.Context) {
+	userID, err := h.parseUserID(c)
 	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	user, err := handler.userRepo.FindByID(uint(id))
-	if err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-		return
-	}
-
-	context.JSON(http.StatusOK, models.UserResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Age:   user.Age,
-	})
-}
-
-func (handler *UserHandler) UpdateUser(context *gin.Context) {
-	id, err := strconv.Atoi(context.Param("user_id"))
-	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		h.sendErrorResponse(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
 	var req models.UpdateUserRequest
-	if err := context.ShouldBindJSON(&req); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.sendErrorResponse(c, http.StatusBadRequest, models.ErrInvalidRequestFormat.Error())
 		return
 	}
 
-	user, err := handler.userRepo.FindByID(uint(id))
+	user, err := h.userService.UpdateUser(userID, &req)
 	if err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		h.handleServiceError(c, err)
 		return
 	}
 
-	// Обновляем только разрешенные поля
-	if req.Name != "" {
-		user.Name = req.Name
-	}
-	if req.Age > 0 {
-		user.Age = req.Age
-	}
+	h.sendUserResponse(c, http.StatusOK, user)
+}
 
-	if err := handler.userRepo.Update(user); err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update user"})
+// DeleteUser обрабатывает запрос на удаление пользователя
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	userID, err := h.parseUserID(c)
+	if err != nil {
+		h.sendErrorResponse(c, http.StatusBadRequest, "Invalid user ID")
 		return
 	}
 
-	context.JSON(http.StatusOK, models.UserResponse{
+	if err := h.userService.DeleteUser(userID); err != nil {
+		h.handleServiceError(c, err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}
+
+// ------------------------------------------------------------
+// Вспомогательные методы
+// ------------------------------------------------------------
+
+func (h *UserHandler) parseQueryParams(c *gin.Context) (page, limit, minAge, maxAge int, err error) {
+	page, err = strconv.Atoi(c.DefaultQuery("page", "1"))
+	if err != nil || page < 1 {
+		return 0, 0, 0, 0, models.ErrInvalidPagination
+	}
+
+	limit, err = strconv.Atoi(c.DefaultQuery("limit", "10"))
+	if err != nil || limit < 1 {
+		return 0, 0, 0, 0, models.ErrInvalidPagination
+	}
+
+	if minAgeStr := c.Query("min_age"); minAgeStr != "" {
+		minAge, err = strconv.Atoi(minAgeStr)
+		if err != nil {
+			return 0, 0, 0, 0, models.ErrInvalidFilterParams
+		}
+	}
+
+	if maxAgeStr := c.Query("max_age"); maxAgeStr != "" {
+		maxAge, err = strconv.Atoi(maxAgeStr)
+		if err != nil {
+			return 0, 0, 0, 0, models.ErrInvalidFilterParams
+		}
+	}
+
+	return page, limit, minAge, maxAge, nil
+}
+
+func (h *UserHandler) parseUserID(c *gin.Context) (uint, error) {
+	id, err := strconv.Atoi(c.Param("user_id"))
+	return uint(id), err
+}
+
+func (h *UserHandler) handleServiceError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, models.ErrUserNotFound):
+		h.sendErrorResponse(c, http.StatusNotFound, "User not found")
+	case errors.Is(err, models.ErrEmailAlreadyExists):
+		h.sendErrorResponse(c, http.StatusBadRequest, "Email already exists")
+	case errors.Is(err, models.ErrInvalidPagination):
+		h.sendErrorResponse(c, http.StatusBadRequest, "Invalid pagination parameters")
+	case errors.Is(err, models.ErrInvalidFilterParams):
+		h.sendErrorResponse(c, http.StatusBadRequest, "Invalid filter parameters")
+	default:
+		h.sendErrorResponse(c, http.StatusInternalServerError, "Internal server error")
+	}
+}
+
+func (h *UserHandler) mapToResponse(users []models.User) []models.UserResponse {
+	response := make([]models.UserResponse, len(users))
+
+	for i, user := range users {
+		// Direct assignment avoids extra allocation from composite literal
+		response[i] = models.UserResponse{
+			ID:    user.ID,
+			Name:  user.Name,
+			Email: user.Email,
+			Age:   user.Age,
+		}
+	}
+
+	return response
+}
+
+func (h *UserHandler) sendUserResponse(c *gin.Context, status int, user *models.User) {
+	c.JSON(status, models.UserResponse{
 		ID:    user.ID,
 		Name:  user.Name,
 		Email: user.Email,
@@ -207,18 +208,8 @@ func (handler *UserHandler) UpdateUser(context *gin.Context) {
 	})
 }
 
-func (handler *UserHandler) DeleteUser(context *gin.Context) {
-	id, err := strconv.Atoi(context.Param("user_id"))
-	// Обработка ошибок входных данных
-	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
-		return
-	}
-
-	if err := handler.userRepo.Delete(uint(id)); err != nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-		return
-	}
-
-	context.Status(http.StatusNoContent)
+func (h *UserHandler) sendErrorResponse(c *gin.Context, status int, message string) {
+	c.JSON(status, models.ErrorResponse{
+		Error: message,
+	})
 }

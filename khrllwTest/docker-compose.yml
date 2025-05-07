@@ -27,7 +27,7 @@ services:
     build: .
     ports:
       - "8080:8080"
-    container_name: ZHOPA
+    container_name: API
     # параметры подключения к БД через переменные окружения
     environment:
       DB_HOST: db
