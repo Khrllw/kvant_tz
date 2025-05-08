@@ -1,8 +1,9 @@
-package database
+package db
 
 import (
 	"fmt"
 	"khrllwTest/internal/middleware"
+
 	"log"
 	"os"
 	"time"
@@ -13,19 +14,26 @@ import (
 	"khrllwTest/internal/models"
 )
 
-// Fixme not automigrate!
-
 // ------------------------------------------------------------
 // Структуры
 // ------------------------------------------------------------
 
 // Config содержит настройки подключения к БД
 type Config struct {
-	Host     string
-	User     string
+	// Хост базы данных
+	Host string
+
+	// Пользователь базы данных
+	User string
+
+	// Пароль для подключения к базе данных
 	Password string
-	DBName   string
-	Port     string
+
+	// Имя базы данных
+	DBName string
+
+	// Порт базы данных
+	Port string
 }
 
 // loadDBConfig загружает конфигурацию БД из переменных окружения
@@ -44,7 +52,7 @@ func loadDBConfig() Config {
 // ------------------------------------------------------------
 
 // SetupDatabase
-// Подключение к БД
+// Подключение к БД и инициализация логирования, пула соединений и миграций
 func SetupDatabase(logConfig *middleware.LoggerConfig) (*gorm.DB, error) {
 	config := loadDBConfig()
 
@@ -61,7 +69,7 @@ func SetupDatabase(logConfig *middleware.LoggerConfig) (*gorm.DB, error) {
 	if err := configureConnectionPool(db); err != nil {
 		return nil, err
 	}
-	if err := autoMigrate(db); err != nil {
+	if err := runSQLMigrations(db); err != nil {
 		return nil, fmt.Errorf("ошибка миграций: %v", err)
 	}
 	log.Println("Соединение с базой данных установлено")
@@ -73,7 +81,7 @@ func SetupDatabase(logConfig *middleware.LoggerConfig) (*gorm.DB, error) {
 // ------------------------------------------------------------
 
 // connectToDB
-// Устанавливает соединение с БД
+// Создает и возвращает соединение с базой данных
 func connectToDB(config Config, gormLogger logger.Interface) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
@@ -100,6 +108,21 @@ func configureConnectionPool(db *gorm.DB) error {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	return nil
+}
+
+// runSQLMigrations
+// Выполняет миграцию базы данных с помощью SQL файлов
+func runSQLMigrations(db *gorm.DB) error {
+	sql, err := os.ReadFile("migrations/init_schema.up.sql")
+	if err != nil {
+		return fmt.Errorf("не удалось прочитать файл миграции: %v", err)
+	}
+
+	if err := db.Exec(string(sql)).Error; err != nil {
+		return fmt.Errorf("ошибка при выполнении миграции: %v", err)
+	}
 
 	return nil
 }

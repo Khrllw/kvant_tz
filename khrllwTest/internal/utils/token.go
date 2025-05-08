@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
-	"log"
 	"os"
 	"time"
 )
@@ -47,8 +46,13 @@ func NewJWTConfig() (*JWTConfig, error) {
 
 // TokenManager определяет контракт для работы с JWT токенами
 type TokenManager interface {
+	// Generate создает новый JWT токен для пользователя
 	Generate(userID uint) (string, error)
+
+	// Parse парсит и проверяет JWT токен
 	Parse(tokenString string) (*jwt.Token, error)
+
+	// ExtractUserID извлекает userID из JWT токена
 	ExtractUserID(token *jwt.Token) (uint, error)
 }
 
@@ -56,7 +60,7 @@ type TokenManager interface {
 // Реализация
 // ------------------------------------------------------------
 
-// JWTManager реализует TokenManager с использованием библиотеки jwt
+// jwtManager реализует TokenManager с использованием библиотеки jwt
 type jwtManager struct {
 	config *JWTConfig
 }
@@ -90,7 +94,6 @@ func (m *jwtManager) Generate(userID uint) (string, error) {
 // Parse проверяет и парсит JWT токен
 func (m *jwtManager) Parse(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		log.Println(tokenString)
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrSignatureInvalid
 		}

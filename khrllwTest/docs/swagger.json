@@ -1,0 +1,664 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API для управления пользователями и заказами",
+        "title": "KhrllwTest API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Вход в систему с email и паролем",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Authorization"
+                ],
+                "summary": "Авторизация пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные для входа",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутрення ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "get": {
+                "description": "Возвращает список пользователей с пагинацией и фильтрацией по возрасту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Получить список пользователей",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Min Age",
+                        "name": "min_age",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Max Age",
+                        "name": "max_age",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UsersListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создает нового пользователя в системе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Создать нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные пользователя",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{user_id}": {
+            "get": {
+                "description": "Возвращает данные пользователя по его ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Получить пользователя по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Обновляет информацию о пользователе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Обновить данные пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User Data",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаляет пользователя по его ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Удалить пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{user_id}/orders": {
+            "get": {
+                "description": "Возвращает все заказы для конкретного пользователя по его ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Получить все заказы пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.OrderResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создает новый заказ для пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Orders"
+                ],
+                "summary": "Создать новый заказ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные заказа",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.OrderResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный формат запроса/некорректные данные",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorLoginResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.CreateOrderRequest": {
+            "description": "Структура для запроса на создание нового заказа",
+            "type": "object",
+            "required": [
+                "price",
+                "product",
+                "quantity"
+            ],
+            "properties": {
+                "price": {
+                    "description": "Цена товара",
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 1500.5
+                },
+                "product": {
+                    "description": "Название продукта, заказанного пользователем",
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Laptop"
+                },
+                "quantity": {
+                    "description": "Количество заказанных единиц товара",
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 2
+                }
+            }
+        },
+        "models.CreateUserRequest": {
+            "description": "Структура для запроса на создание нового пользователя",
+            "type": "object",
+            "required": [
+                "age",
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "age": {
+                    "description": "Возраст пользователя",
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 30
+                },
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "john@example.com"
+                },
+                "name": {
+                    "description": "Имя пользователя",
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "John Doe"
+                },
+                "password": {
+                    "description": "Введенный пользователем пароль",
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "securepassword123"
+                }
+            }
+        },
+        "models.ErrorLoginResponse": {
+            "description": "Структура, которая содержит сообщение об ошибке",
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "Сообщение об ошибке",
+                    "type": "string"
+                }
+            }
+        },
+        "models.LoginRequest": {
+            "description": "Структура данных для аутентификации пользователя через email и пароль",
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "description": "Email пользователя для аутентификации",
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "password": {
+                    "description": "Пароль пользователя",
+                    "type": "string",
+                    "minLength": 8,
+                    "example": "securepassword123"
+                }
+            }
+        },
+        "models.LoginResponse": {
+            "description": "Структура, которая возвращает токен для аутентифицированного пользователя",
+            "type": "object",
+            "properties": {
+                "token": {
+                    "description": "Токен аутентифицированного пользователя",
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                }
+            }
+        },
+        "models.OrderResponse": {
+            "description": "Структура для ответа, содержащая информацию о заказе",
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "description": "Дата и время создания заказа",
+                    "type": "string",
+                    "example": "2025-05-07T12:34:56Z"
+                },
+                "id": {
+                    "description": "Уникальный идентификатор заказа",
+                    "type": "integer",
+                    "example": 1
+                },
+                "price": {
+                    "description": "Цена товара",
+                    "type": "number",
+                    "example": 1500.5
+                },
+                "product": {
+                    "description": "Название продукта, заказанного пользователем",
+                    "type": "string",
+                    "example": "Laptop"
+                },
+                "quantity": {
+                    "description": "Количество заказанных единиц товара",
+                    "type": "integer",
+                    "example": 2
+                },
+                "user_id": {
+                    "description": "Идентификатор пользователя, который сделал заказ",
+                    "type": "integer",
+                    "example": 123
+                }
+            }
+        },
+        "models.UpdateUserRequest": {
+            "description": "Структура для запроса на обновление данных пользователя",
+            "type": "object",
+            "required": [
+                "age",
+                "email",
+                "name"
+            ],
+            "properties": {
+                "age": {
+                    "description": "Возраст пользователя",
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 30
+                },
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "john@example.com"
+                },
+                "name": {
+                    "description": "Имя пользователя",
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "John Doe"
+                }
+            }
+        },
+        "models.UserResponse": {
+            "description": "Структура ответа, содержащая информацию о пользователе",
+            "type": "object",
+            "properties": {
+                "age": {
+                    "description": "Возраст пользователя",
+                    "type": "integer",
+                    "example": 30
+                },
+                "email": {
+                    "description": "Email пользователя",
+                    "type": "string",
+                    "example": "john@example.com"
+                },
+                "id": {
+                    "description": "Уникальный идентификатор пользователя",
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "description": "Имя пользователя",
+                    "type": "string",
+                    "example": "John Doe"
+                }
+            }
+        },
+        "models.UsersListResponse": {
+            "description": "Структура ответа с пользователями и информацией о пагинации",
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "Количество элементов (пользователей) на одной странице",
+                    "type": "integer",
+                    "example": 10
+                },
+                "page": {
+                    "description": "Номер текущей страницы в результате пагинации",
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "description": "Общее количество пользователей, соответствующих запросу (до применения пагинации)",
+                    "type": "integer",
+                    "example": 100
+                },
+                "users": {
+                    "description": "Список пользователей на текущей странице",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.UserResponse"
+                    }
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

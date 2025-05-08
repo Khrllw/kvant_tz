@@ -1,3 +1,16 @@
+// @title KhrllwTest API
+// @version 1.0
+// @description API для управления пользователями и заказами
+
+// @host localhost:8080
+// @BasePath /
+// @schemes http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token
+
 package main
 
 import (
@@ -5,7 +18,7 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 	"io"
-	"khrllwTest/internal/database"
+	"khrllwTest/internal/db"
 	"khrllwTest/internal/handlers"
 	"khrllwTest/internal/middleware"
 	"khrllwTest/internal/repository"
@@ -13,6 +26,10 @@ import (
 	"khrllwTest/internal/utils"
 	"log"
 	"os"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "khrllwTest/docs"
 )
 
 // loadEnv загружает переменные окружения
@@ -22,7 +39,7 @@ func loadEnv() {
 	}
 }
 
-// Загрузка переменных окружения
+// getPort получает порт из переменных окружения
 func getPort() string {
 	if port := os.Getenv("API_PORT"); port != "" {
 		return port
@@ -32,44 +49,41 @@ func getPort() string {
 
 // initDatabase инициализирует подключение к БД
 func initDatabase(logConfig *middleware.LoggerConfig) *gorm.DB {
-	db, err := database.SetupDatabase(logConfig)
+	db, err := db.SetupDatabase(logConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	return db
 }
 
-// setupRouter
-// Fixme Посмотреть логгер
-// Выносим настройку маршрутов в отдельную функцию
+// setupRouter настраивает маршруты API
 func setupRouter(userHandler *handlers.UserHandler,
 	orderHandler *handlers.OrderHandler,
-	authHandler *handlers.AuthHandler,
+	loginHandler *handlers.LoginHandler,
+	authorization *middleware.Authorization,
 	logConfig *middleware.LoggerConfig) *gin.Engine {
 
 	router := gin.Default()
 
+	// Swagger
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// ------------------------- Обработка запросов -------------------------
-	// Публичный маршрут
-	router.POST("/auth/login", authHandler.Login)
 
-	// Каскадная группировка запросов (с JWT)
-	authConfig, err := utils.NewJWTConfig()
-	if err != nil {
-		log.Fatalf("Ошибка инициализации конфигурации аутентификации: %v", err)
-	}
+	// Роут для авторизации пользователя
+	router.POST("/auth/login", loginHandler.Login)
 
-	tokenManager := utils.NewTokenManager(authConfig)
-	authMiddleware := middleware.NewAuthorization(tokenManager)
+	// Роут для создания пользователя (без авторизации)
+	router.POST("/users", userHandler.CreateUser)
 
+	// Группа для работы с пользователями (требует авторизации)
 	usersGroup := router.Group("/users")
-	usersGroup.Use(middleware.RequestLogger(logConfig))
-	usersGroup.Use(authMiddleware.Middleware())
+	usersGroup.Use(authorization.Middleware())
 	{
 		usersGroup.GET("", userHandler.GetUsers)
-		usersGroup.POST("", userHandler.CreateUser)
 
 		usersIDGroup := usersGroup.Group("/:user_id")
+
 		// Подключение логирования для всех запросов группы
 		usersIDGroup.Use(middleware.RequestLogger(logConfig))
 		{
@@ -126,12 +140,14 @@ func main() {
 	}
 
 	tokenManager := utils.NewTokenManager(authConfig)
-	authService := service.NewAuthService(userRepo, tokenManager, passHasher)
-	authHandler := handlers.NewAuthHandler(authService)
+	authService := service.NewLoginService(userRepo, tokenManager, passHasher)
+	authHandler := handlers.NewLoginHandler(authService)
+
+	authorizationMiddleware := middleware.NewAuthorization(tokenManager, userRepo)
 
 	// ----------------- ROUTER -----------------
 	// Настройка роутера
-	router := setupRouter(userHandler, orderHandler, authHandler, logConfig)
+	router := setupRouter(userHandler, orderHandler, authHandler, authorizationMiddleware, logConfig)
 
 	// ------------------ RUN ------------------
 	// Запуск сервера

@@ -2,35 +2,46 @@ package models
 
 import "errors"
 
-// Ошибки приложения
+// ---------------------------------- ОШИБКИ API ----------------------------------
+
 var (
-	// Общие ошибки
-	ErrInvalidRequestFormat  = errors.New("неверный формат запроса")
-	ErrEmailPasswordRequired = errors.New("email и пароль обязательны")
-	ErrInternalServerError   = errors.New("внутренняя ошибка сервера")
+	// ---------------------------- Общие ошибки -------------------------
 
-	// Ошибки аутентификации
-	ErrInvalidCredentials  = errors.New("неверные учетные данные")
-	ErrInvalidToken        = errors.New("неверный токен")
-	ErrTokenRequired       = errors.New("токен отсутствует")
-	ErrInvalidTokenClaims  = errors.New("ErrInvalidTokenClaims")
-	ErrInvalidFilterParams = errors.New("неверные параметры фильтра")
+	ErrInvalidRequestFormat = errors.New("Неверный формат запроса. ")
+	ErrInternalServerError  = errors.New("Внутренняя ошибка сервера. ")
+	ErrDatabaseError        = errors.New("Ошибка базы данных. ")
 
-	// Ошибки пользователей
-	ErrUserNotFound       = errors.New("пользователь не найден")
-	ErrEmailAlreadyExists = errors.New("email уже существует")
-	ErrEmail              = errors.New("email err")
-	//ErrRecordNotFound     = errors.New("record не найдена")
+	// ------------------------ Ошибки авторизации -----------------------
 
-	ErrInvalidPagination = errors.New("неверная пагинация")
-	ErrRecordNotFound    = errors.New("запись не найдена")
+	ErrEmailPasswordRequired = errors.New("Email и пароль обязательны. ")
+	ErrInvalidCredentials    = errors.New("Неверные учетные данные. ")
+	ErrInvalidToken          = errors.New("Неверный токен авторизации. ")
+	ErrTokenRequired         = errors.New("Токен авторизации отсутствует. ")
+	ErrTokenGenerationFailed = errors.New("Ошибка создания токена авторизации. ")
+	ErrPasswordHashFailed    = errors.New("Ошибка хеширования пароля. ")
 
-	// Ошибки заказов
-	ErrOrderNotFound = errors.New("заказ не найден")
+	ErrInvalidTokenClaims = errors.New("некорректное содержимое токена")
 
-	ErrInvalidPrice    = errors.New("неверная цена")
-	ErrInvalidQuantity = errors.New("неверное количество")
-	ErrProductRequired = errors.New("неверный продукт")
-	//ErrRecordNotFound = errors.New("запись не найдена")
+	// ---------------------- Ошибки пользователей -----------------------
 
+	ErrUserNotFound        = errors.New("Пользователь не найден. ")
+	ErrInvalidUserID       = errors.New("Неверный ID пользователя. ")
+	ErrEmailAlreadyExists  = errors.New("Пользователь с данным email уже существует. ")
+	ErrInvalidUserName     = errors.New("Некорректное имя пользователя. ")
+	ErrInvalidUserEmail    = errors.New("Некорректные email пользователя. ")
+	ErrInvalidUserPassword = errors.New("Некорректные пароль пользователя. ")
+	ErrInvalidUserAge      = errors.New("Некорректный возраст пользователя. ")
+
+	ErrInvalidPagination   = errors.New("Некорректные параметры пагинации. ")
+	ErrInvalidFilterParams = errors.New("Некорректные параметры фильтрации. ")
+
+	// ------------------------- Репозитории -----------------------------
+
+	ErrRecordNotFound = errors.New("Запись не найдена. ")
+
+	// ------------------------- Ошибки заказов -------------------------
+
+	ErrInvalidPrice    = errors.New("Некорректная цена. ")
+	ErrInvalidQuantity = errors.New("Некорректное количество. ")
+	ErrProductRequired = errors.New("Некорректное название продукта. ")
 )

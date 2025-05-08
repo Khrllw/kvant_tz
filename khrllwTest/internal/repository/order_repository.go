@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"khrllwTest/internal/models"
 )
@@ -9,28 +10,26 @@ import (
 // Интерфейсы
 // ------------------------------------------------------------
 
-// OrderRepository - определяет контракт для работы с заказами
+// OrderRepository определяет контракт для работы с заказами
 type OrderRepository interface {
 
 	// Create
-	//Создание нового заказа
+	// Создание нового заказа
 	Create(order *models.Order) error
 
-	// FindByID
-	//Поиск заказа по ID
-	FindByID(id uint) (*models.Order, error)
-
 	// FindByUserID
-	// Поиск всех заказов пользователя
+	// Поиск всех заказов пользователя по ID
 	FindByUserID(userID uint) ([]models.Order, error)
 
-	// Update
-	//Обновление данных заказа
+	/* Update
+	// Обновление данных заказа
 	Update(order *models.Order) error
 
 	// Delete
-	//Удаление заказа по ID
+	// Удаление заказа по ID
 	Delete(id uint) error
+
+	*/
 }
 
 // ------------------------------------------------------------
@@ -60,18 +59,17 @@ func (r *OrderRepositoryImpl) Create(order *models.Order) error {
 	return r.db.Create(order).Error
 }
 
-func (r *OrderRepositoryImpl) FindByID(id uint) (*models.Order, error) {
-	var order models.Order
-	err := r.db.First(&order, id).Error
-	return &order, err
-}
-
 func (r *OrderRepositoryImpl) FindByUserID(userID uint) ([]models.Order, error) {
 	var orders []models.Order
 	// SELECT * FROM orders WHERE user_id = ?
 	err := r.db.Where("user_id = ?", userID).Find(&orders).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return orders, nil
+	}
 	return orders, err
 }
+
+/*
 
 func (r *OrderRepositoryImpl) Update(order *models.Order) error {
 	// UPDATE orders SET ... WHERE id = ?
@@ -82,3 +80,5 @@ func (r *OrderRepositoryImpl) Delete(id uint) error {
 	// DELETE FROM orders WHERE id = ?
 	return r.db.Delete(&models.Order{}, id).Error
 }
+
+*/

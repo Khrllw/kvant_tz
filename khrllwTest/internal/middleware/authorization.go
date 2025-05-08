@@ -1,8 +1,10 @@
 package middleware
 
 import (
-	"log"
+	"errors"
+	"khrllwTest/internal/repository"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -14,26 +16,31 @@ import (
 // Структуры
 // ------------------------------------------------------------
 
+// Authorization Middleware для авторизации с использованием JWT
 type Authorization struct {
 	tokenManager utils.TokenManager
+	userRepos    repository.UserRepository
 }
 
 // ------------------------------------------------------------
 // Конструктор
 // ------------------------------------------------------------
 
-func NewAuthorization(tokenManager utils.TokenManager) *Authorization {
-	return &Authorization{tokenManager: tokenManager}
+// NewAuthorization создает новый экземпляр Authorization
+func NewAuthorization(tokenManager utils.TokenManager, userRepos repository.UserRepository) *Authorization {
+	return &Authorization{
+		tokenManager: tokenManager,
+		userRepos:    userRepos,
+	}
 }
 
 // ------------------------------------------------------------
 // Основные методы
 // ------------------------------------------------------------
 
-// Middleware проверяет JWT токен и добавляет user_id в контекст
+// Middleware проверяет JWT токен и добавляет user_id в контекст и сверяет его с параметром маршрута
 func (m *Authorization) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		// Извлекаем токен из заголовка
 		tokenString := m.extractToken(c)
 		if tokenString == "" {
@@ -43,7 +50,6 @@ func (m *Authorization) Middleware() gin.HandlerFunc {
 
 		// Парсим и валидируем токен
 		token, err := m.tokenManager.Parse(tokenString)
-		log.Println(token, err)
 		if err != nil || !token.Valid {
 			m.abortWithError(c, http.StatusUnauthorized, models.ErrInvalidToken)
 			return
@@ -56,11 +62,29 @@ func (m *Authorization) Middleware() gin.HandlerFunc {
 			return
 		}
 
+		// Извлекаем параметр id из маршрута и проверяем его совпадение с user_id
+		paramID := c.Param("user_id")
+		if paramID != "" && paramID != strconv.Itoa(int(userID)) {
+			m.abortWithError(c, http.StatusUnauthorized, models.ErrInvalidTokenClaims)
+			return
+		}
+
+		_, err = m.userRepos.FindByID(userID)
+		if err != nil {
+			if errors.Is(err, models.ErrDatabaseError) {
+				m.abortWithError(c, http.StatusInternalServerError, err)
+			}
+			m.abortWithError(c, http.StatusUnauthorized, err)
+		}
+
 		// Добавляем user_id в контекст
 		c.Set("user_id", userID)
-		c.Next()
 	}
 }
+
+// ------------------------------------------------------------
+// Вспомогательные методы
+// ------------------------------------------------------------
 
 // extractToken извлекает токен из заголовка Authorization
 func (m *Authorization) extractToken(c *gin.Context) string {
@@ -80,7 +104,7 @@ func (m *Authorization) extractToken(c *gin.Context) string {
 
 // abortWithError отправляет ошибку и прерывает выполнение
 func (m *Authorization) abortWithError(c *gin.Context, status int, err error) {
-	c.AbortWithStatusJSON(status, models.ErrorResponse{
+	c.AbortWithStatusJSON(status, models.ErrorLoginResponse{
 		Error: err.Error(),
 	})
 }

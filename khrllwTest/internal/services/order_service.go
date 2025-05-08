@@ -2,8 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
-
 	"khrllwTest/internal/models"
 	"khrllwTest/internal/repository"
 )
@@ -40,36 +38,32 @@ func NewOrderService(
 // CreateOrder создает новый заказ для пользователя
 func (s *OrderService) CreateOrder(userID uint, req *models.CreateOrderRequest) (*models.Order, error) {
 	if err := s.validateUserExists(userID); err != nil {
-		return nil, fmt.Errorf("user validation failed: %w", err)
+		return nil, err
 	}
-
 	if err := s.validateOrderRequest(req); err != nil {
-		return nil, fmt.Errorf("order validation failed: %w", err)
+		return nil, err
 	}
-
 	order := &models.Order{
 		UserID:   userID,
 		Product:  req.Product,
 		Quantity: req.Quantity,
 		Price:    req.Price,
 	}
-
 	if err := s.orderRepo.Create(order); err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+		return nil, models.ErrDatabaseError
 	}
-
 	return order, nil
 }
 
 // GetUserOrders возвращает заказы пользователя
 func (s *OrderService) GetUserOrders(userID uint) ([]models.Order, error) {
 	if err := s.validateUserExists(userID); err != nil {
-		return nil, fmt.Errorf("user validation failed: %w", err)
+		return nil, err
 	}
 
 	orders, err := s.orderRepo.FindByUserID(userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get orders: %w", err)
+		return nil, models.ErrDatabaseError
 	}
 
 	return orders, nil
@@ -79,17 +73,19 @@ func (s *OrderService) GetUserOrders(userID uint) ([]models.Order, error) {
 // Вспомогательные методы
 // ------------------------------------------------------------
 
+// validateUserExists проверяет существование пользователя
 func (s *OrderService) validateUserExists(userID uint) error {
 	_, err := s.userRepo.FindByID(userID)
 	if err != nil {
-		if errors.Is(err, models.ErrRecordNotFound) {
-			return models.ErrUserNotFound
+		if errors.Is(err, models.ErrUserNotFound) {
+			return err
 		}
-		return fmt.Errorf("repository error: %w", err)
+		return models.ErrDatabaseError
 	}
 	return nil
 }
 
+// validateOrderRequest проверяет валидность данных заказа
 func (s *OrderService) validateOrderRequest(req *models.CreateOrderRequest) error {
 	if req.Product == "" {
 		return models.ErrProductRequired
@@ -101,19 +97,4 @@ func (s *OrderService) validateOrderRequest(req *models.CreateOrderRequest) erro
 		return models.ErrInvalidPrice
 	}
 	return nil
-}
-
-func (s *OrderService) mapToResponse(orders []*models.Order) []models.OrderResponse {
-	response := make([]models.OrderResponse, 0, len(orders))
-	for _, order := range orders {
-		response = append(response, models.OrderResponse{
-			ID:        order.ID,
-			UserID:    order.UserID,
-			Product:   order.Product,
-			Quantity:  order.Quantity,
-			Price:     order.Price,
-			CreatedAt: order.CreatedAt,
-		})
-	}
-	return response
 }

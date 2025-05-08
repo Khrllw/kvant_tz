@@ -1,6 +1,6 @@
 -- +goose Up
 -- Создаем таблицу users
-CREATE TABLE users
+CREATE TABLE IF NOT EXISTS users
 (
     id            SERIAL PRIMARY KEY,
     name          VARCHAR(255)        NOT NULL,
@@ -10,7 +10,7 @@ CREATE TABLE users
 );
 
 -- Создаем таблицу orders
-CREATE TABLE orders
+CREATE TABLE IF NOT EXISTS orders
 (
     id         SERIAL PRIMARY KEY,
     user_id    INT            NOT NULL REFERENCES users (id) ON DELETE CASCADE,
@@ -21,7 +21,7 @@ CREATE TABLE orders
 );
 
 -- Индекс для ускорения поиска пользователей по email
-CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
 -- Индекс для ускорения поиска заказов по пользователю
-CREATE INDEX idx_orders_user_id ON orders (user_id);
+CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders (user_id);

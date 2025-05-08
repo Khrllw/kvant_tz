@@ -39,7 +39,9 @@ func defaultConfig() *LoggerConfig {
 	}
 }
 
-// ----------------- HTTP ЛОГГЕР -----------------
+// ------------------------------------------------------------
+//                       HTTP ЛОГГЕР
+// ------------------------------------------------------------
 
 // RequestLogger создает middleware для логирования HTTP запросов
 func RequestLogger(config *LoggerConfig) gin.HandlerFunc {
@@ -163,7 +165,9 @@ func logRequestEnd(config *LoggerConfig, c *gin.Context, requestID string, start
 	//logRequestErrors(config, c, requestID)
 }
 
-// ----------------- DB ЛОГГЕР -----------------
+// ------------------------------------------------------------
+//                    ЛОГГЕР БАЗЫ ДАННЫХ
+// ------------------------------------------------------------
 
 // DBLogger создает настроенный логгер для GORM
 func DBLogger(config *LoggerConfig) logger.Interface {

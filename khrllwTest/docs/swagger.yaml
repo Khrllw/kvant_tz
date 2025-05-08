@@ -1,0 +1,467 @@
+basePath: /
+definitions:
+  models.CreateOrderRequest:
+    description: Структура для запроса на создание нового заказа
+    properties:
+      price:
+        description: Цена товара
+        example: 1500.5
+        minimum: 0
+        type: number
+      product:
+        description: Название продукта, заказанного пользователем
+        example: Laptop
+        maxLength: 255
+        type: string
+      quantity:
+        description: Количество заказанных единиц товара
+        example: 2
+        minimum: 1
+        type: integer
+    required:
+    - price
+    - product
+    - quantity
+    type: object
+  models.CreateUserRequest:
+    description: Структура для запроса на создание нового пользователя
+    properties:
+      age:
+        description: Возраст пользователя
+        example: 30
+        minimum: 0
+        type: integer
+      email:
+        description: Email пользователя
+        example: john@example.com
+        maxLength: 255
+        type: string
+      name:
+        description: Имя пользователя
+        example: John Doe
+        maxLength: 255
+        type: string
+      password:
+        description: Введенный пользователем пароль
+        example: securepassword123
+        minLength: 8
+        type: string
+    required:
+    - age
+    - email
+    - name
+    - password
+    type: object
+  models.ErrorLoginResponse:
+    description: Структура, которая содержит сообщение об ошибке
+    properties:
+      error:
+        description: Сообщение об ошибке
+        type: string
+    type: object
+  models.LoginRequest:
+    description: Структура данных для аутентификации пользователя через email и пароль
+    properties:
+      email:
+        description: Email пользователя для аутентификации
+        example: user@example.com
+        type: string
+      password:
+        description: Пароль пользователя
+        example: securepassword123
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.LoginResponse:
+    description: Структура, которая возвращает токен для аутентифицированного пользователя
+    properties:
+      token:
+        description: Токен аутентифицированного пользователя
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        type: string
+    type: object
+  models.OrderResponse:
+    description: Структура для ответа, содержащая информацию о заказе
+    properties:
+      created_at:
+        description: Дата и время создания заказа
+        example: "2025-05-07T12:34:56Z"
+        type: string
+      id:
+        description: Уникальный идентификатор заказа
+        example: 1
+        type: integer
+      price:
+        description: Цена товара
+        example: 1500.5
+        type: number
+      product:
+        description: Название продукта, заказанного пользователем
+        example: Laptop
+        type: string
+      quantity:
+        description: Количество заказанных единиц товара
+        example: 2
+        type: integer
+      user_id:
+        description: Идентификатор пользователя, который сделал заказ
+        example: 123
+        type: integer
+    type: object
+  models.UpdateUserRequest:
+    description: Структура для запроса на обновление данных пользователя
+    properties:
+      age:
+        description: Возраст пользователя
+        example: 30
+        minimum: 0
+        type: integer
+      email:
+        description: Email пользователя
+        example: john@example.com
+        maxLength: 255
+        type: string
+      name:
+        description: Имя пользователя
+        example: John Doe
+        maxLength: 255
+        type: string
+    required:
+    - age
+    - email
+    - name
+    type: object
+  models.UserResponse:
+    description: Структура ответа, содержащая информацию о пользователе
+    properties:
+      age:
+        description: Возраст пользователя
+        example: 30
+        type: integer
+      email:
+        description: Email пользователя
+        example: john@example.com
+        type: string
+      id:
+        description: Уникальный идентификатор пользователя
+        example: 1
+        type: integer
+      name:
+        description: Имя пользователя
+        example: John Doe
+        type: string
+    type: object
+  models.UsersListResponse:
+    description: Структура ответа с пользователями и информацией о пагинации
+    properties:
+      limit:
+        description: Количество элементов (пользователей) на одной странице
+        example: 10
+        type: integer
+      page:
+        description: Номер текущей страницы в результате пагинации
+        example: 1
+        type: integer
+      total:
+        description: Общее количество пользователей, соответствующих запросу (до применения
+          пагинации)
+        example: 100
+        type: integer
+      users:
+        description: Список пользователей на текущей странице
+        items:
+          $ref: '#/definitions/models.UserResponse'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для управления пользователями и заказами
+  title: KhrllwTest API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Вход в систему с email и паролем
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.LoginResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "401":
+          description: Некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутрення ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Авторизация пользователя
+      tags:
+      - Authorization
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список пользователей с пагинацией и фильтрацией по возрасту
+      parameters:
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Min Age
+        in: query
+        name: min_age
+        type: integer
+      - description: Max Age
+        in: query
+        name: max_age
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UsersListResponse'
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Получить список пользователей
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя в системе
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Создать нового пользователя
+      tags:
+      - Users
+  /users/{user_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя по его ID
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Удалить пользователя
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Возвращает данные пользователя по его ID
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Получить пользователя по ID
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о пользователе
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.UserResponse'
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Обновить данные пользователя
+      tags:
+      - Users
+  /users/{user_id}/orders:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает все заказы для конкретного пользователя по его ID
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.OrderResponse'
+            type: array
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Получить все заказы пользователя
+      tags:
+      - Orders
+    post:
+      consumes:
+      - application/json
+      description: Создает новый заказ для пользователя
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Данные заказа
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.OrderResponse'
+        "400":
+          description: Неверный формат запроса/некорректные данные
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/models.ErrorLoginResponse'
+      summary: Создать новый заказ
+      tags:
+      - Orders
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

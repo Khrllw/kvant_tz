@@ -8,7 +8,11 @@ import "golang.org/x/crypto/bcrypt"
 
 // PasswordHasher определяет контракт для хеширования паролей
 type PasswordHasher interface {
+
+	// Hash хэширует пароль
 	Hash(password string) (string, error)
+
+	// Check проверяет, соответствует ли пароль его хешу
 	Check(password, hash string) bool
 }
 
@@ -18,6 +22,7 @@ type PasswordHasher interface {
 
 // bcryptHasher реализует PasswordHasher используя bcrypt
 type bcryptHasher struct {
+	// cost стоимость bcryptHasher
 	cost int
 }
 
